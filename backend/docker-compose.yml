@@ -1,0 +1,19 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: road_asset_db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: road_asset_data
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+
+    ports:
+      - 5002:5432
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:

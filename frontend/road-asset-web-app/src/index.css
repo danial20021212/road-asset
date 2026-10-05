@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+html,
+body {
+    width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+    scroll-behavior: smooth;
+}
+@layer components {
+    main {
+        @apply w-full min-h-screen relative m-0 p-0 bg-gray-50;
+    }
+
+    #sidebar {
+        @apply w-56 h-screen bg-gray-900 flex flex-col p-4 gap-2 fixed left-0 top-0;
+
+        .sidebar-title {
+            @apply text-xl font-bold text-white mb-6;
+        }
+
+        .sidebar-link {
+            @apply block px-4 py-2 rounded-lg transition-colors text-gray-200 hover:bg-gray-700;
+
+            &.active {
+                @apply bg-amber-400 text-black font-semibold;
+            }
+        }
+    }
+
+    #home {
+        @apply p-8;
+
+        .page-title {
+            @apply text-3xl font-bold text-gray-800;
+        }
+
+        .page-subtitle {
+            @apply text-gray-500 mt-2;
+        }
+    }
+
+    #inspection {
+        @apply p-8;
+
+        .page-title {
+            @apply text-3xl font-bold text-gray-800 mb-6;
+        }
+
+        .inspection-form {
+            @apply flex flex-col gap-4 max-w-md;
+
+            .file-input {
+                @apply border border-gray-300 rounded-lg p-2 text-sm;
+            }
+
+            .detect-btn {
+                @apply bg-amber-400 hover:bg-amber-500 disabled:bg-gray-300 text-black font-semibold py-2 px-4 rounded-lg transition-colors;
+            }
+        }
+
+        .result-section {
+            @apply flex gap-8 mt-8 flex-wrap;
+
+            .result-label {
+                @apply text-sm text-gray-500 mb-2;
+            }
+
+            .result-image {
+                @apply max-w-sm rounded-lg border border-gray-200;
+            }
+        }
+    }
+}
