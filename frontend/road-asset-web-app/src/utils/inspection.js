@@ -138,7 +138,8 @@ export const extractBoxes = (output, fallbackDims) => {
   return []
 }
 
-// Uploads a video once. Returns its GPS points and a URL to a browser-playable (H.264) copy.
+
+// Uploads a video once. The server reads its GPS, cuts one frame per second and saves everything.
 export const processVideo = async (file, signal) => {
   const form = new FormData()
   form.append('video', file)
@@ -155,12 +156,12 @@ export const processVideo = async (file, signal) => {
     throw new Error(message)
   }
 
-  const { points, previewUrl, duplicate } = await res.json()
-  return {
-    points: Array.isArray(points) ? points : [],
-    previewUrl: `${API_BASE}${previewUrl}`,
-    duplicate: !!duplicate,
+  const { videoId, duplicate } = await res.json()
+  if (!videoId) {
+    throw new Error('The video was processed but could not be saved. Check that the database is running.')
   }
+  return { videoId, duplicate: !!duplicate }
+
 }
 
 

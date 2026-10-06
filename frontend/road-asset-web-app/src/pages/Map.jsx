@@ -1,4 +1,4 @@
-import React, { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import React, { Fragment, useEffect, useMemo, useState } from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -11,10 +11,10 @@ import {
 import 'leaflet/dist/leaflet.css'
 
 import FrameViewer from '../components/FrameViewer'
-import { API_BASE, detectFrames, formatTime } from '../utils/inspection'
 import { roads } from '../data/roads'
-import { fetchTrips, fetchFrames } from '../utils/trips'
+import { fetchTrips } from '../utils/trips'
 import { isRoadCovered } from '../utils/coverage'
+import { useTripFrames } from '../hooks/useTripFrames'
 
 const TRAVELED = { color: '#2563eb', weight: 5 }
 const SELECTED = { color: '#f97316', weight: 6 }
@@ -30,19 +30,6 @@ const dot = (fill) => ({
   fillColor: fill,
   fillOpacity: 1,
   weight: 2,
-})
-
-// Turns a saved frame into the same shape the AI Inspection tab uses
-const toViewerFrame = (f) => ({
-  dataUrl: `${API_BASE}${f.url}`,
-  label: formatTime(f.seq),
-  width: 1280,
-  height: 720,
-  boxes: [],
-  detected: false,
-  edited: false,
-  lat: f.lat,
-  lng: f.lng,
 })
 
 const FitAll = ({ positions }) => {
@@ -61,12 +48,17 @@ const Map = () => {
   const [trips, setTrips] = useState([])
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
-
   const [selectedId, setSelectedId] = useState(null)
-  const [frames, setFrames] = useState([])
-  const [framesStatus, setFramesStatus] = useState('idle')
   const [viewerOpen, setViewerOpen] = useState(false)
-  const [inspectingIndex, setInspectingIndex] = useState(null)
+
+  const {
+    frames,
+    status: framesStatus,
+    inspectingIndex,
+    saveStatus,
+    inspectFrame,
+    updateFrameBoxes,
+  } = useTripFrames(selectedId)
 
   useEffect(() => {
     let cancelled = false
@@ -90,78 +82,10 @@ const Map = () => {
     }
   }, [])
 
-  // Load the frames of the clicked trip
-  useEffect(() => {
-    if (selectedId === null) return
-
-    let cancelled = false
-
-    setFrames([])
-    setFramesStatus('loading')
-
-    fetchFrames(selectedId)
-      .then((data) => {
-        if (cancelled) return
-
-        setFrames(data.map(toViewerFrame))
-        setFramesStatus('done')
-      })
-      .catch(() => {
-        if (!cancelled) {
-          setFramesStatus('error')
-        }
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [selectedId])
-
   const handleRouteClick = (tripId) => {
     setSelectedId(tripId)
     setViewerOpen(true)
   }
-
-  const inspectFrame = async (i) => {
-    if (inspectingIndex !== null || !frames[i]) return
-
-    if (
-      frames[i].edited &&
-      !window.confirm(
-        'This frame has manual edits. Inspecting again will replace them. Continue?'
-      )
-    ) {
-      return
-    }
-
-    setInspectingIndex(i)
-
-    try {
-      const [updated] = await detectFrames([frames[i]])
-
-      setFrames((prev) =>
-        prev.map((frame, index) =>
-          index === i ? updated : frame
-        )
-      )
-    } finally {
-      setInspectingIndex(null)
-    }
-  }
-
-  const updateFrameBoxes = useCallback((i, boxes) => {
-    setFrames((prev) =>
-      prev.map((frame, index) =>
-        index === i
-          ? {
-              ...frame,
-              boxes,
-              edited: true,
-            }
-          : frame
-      )
-    )
-  }, [])
 
   const uncharted = useMemo(() => {
     const tripPoints = trips.flatMap((trip) => trip.positions)
@@ -233,6 +157,12 @@ const Map = () => {
         </p>
       )}
 
+      {saveStatus === 'error' && (
+        <p className="mt-2 text-sm text-red-600">
+          Your last change could not be saved. Check the server.
+        </p>
+      )}
+
       <div className="isolate mt-3 h-[560px] overflow-hidden rounded-xl border border-slate-200">
         <MapContainer
           center={[1.5535, 110.3593]}
@@ -263,6 +193,7 @@ const Map = () => {
                   interactive={false}
                 />
 
+                {/* Wide invisible line so the route is easier to click */}
                 <Polyline
                   positions={trip.positions}
                   pathOptions={{
@@ -270,7 +201,8 @@ const Map = () => {
                     opacity: 0,
                   }}
                   eventHandlers={{
-                    click: () => handleRouteClick(trip.id),
+                    click: () =>
+                      handleRouteClick(trip.id),
                   }}
                 >
                   <Tooltip sticky>
@@ -332,6 +264,7 @@ const Map = () => {
           onBoxesChange={updateFrameBoxes}
           inspectingIndex={inspectingIndex}
           inspectDisabled={false}
+          saveStatus={saveStatus}
         />
       )}
     </div>

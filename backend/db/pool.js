@@ -31,5 +31,18 @@ export async function initDb() {
       lng DOUBLE PRECISION,
       UNIQUE (video_id, seq)
     );
+    ALTER TABLE frames ADD COLUMN IF NOT EXISTS inspected_at TIMESTAMPTZ; -- null = nobody has looked at it yet
+    ALTER TABLE frames ADD COLUMN IF NOT EXISTS edited BOOLEAN NOT NULL DEFAULT false;
+
+    CREATE TABLE IF NOT EXISTS detections (
+      id BIGSERIAL PRIMARY KEY,
+      frame_id BIGINT NOT NULL REFERENCES frames(id) ON DELETE CASCADE,
+      label TEXT NOT NULL,
+      box_ymin REAL NOT NULL, -- box coordinates on the 0-1000 scale the viewer uses
+      box_xmin REAL NOT NULL,
+      box_ymax REAL NOT NULL,
+      box_xmax REAL NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS detections_frame_idx ON detections (frame_id);
   `)
 }
