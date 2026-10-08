@@ -28,11 +28,25 @@ app.use('/api/frames', framesRoutes)
 
 initDb().catch((err) => console.error('Database not ready:', err.message)) // before app.listen
 
+// const ROBOFLOW_API_KEY = process.env.ROBOFLOW_API_KEY || 'YOUR_API_KEY'
+// const WORKFLOW_URL = 'https://serverless.roboflow.com/danial-lja5y/workflows/qwen3-8-max-object-detection'
+// const DETECT_CLASSES = ['chevron sign'] // must match what the model actually returns in "class"
 const ROBOFLOW_API_KEY = process.env.ROBOFLOW_API_KEY || 'YOUR_API_KEY'
-const WORKFLOW_URL = 'https://serverless.roboflow.com/danial-lja5y/workflows/qwen3-8-max-object-detection'
-const DETECT_CLASSES = ['chevron sign'] // must match what the model actually returns in "class"
+const WORKFLOW_URL = 'https://serverless.roboflow.com/hijjaz-danial/workflows/gemini-3-8-flash-object-detection'
+const DETECT_CLASSES = [
+  'traffic sign',
+  'left turn arrow road marking',
+  'right turn arrow road marking',
+  'straight arrow road marking',
+  'left and straight arrow road marking',
+  'right and straight arrow road marking',
+  'left and u-turn arrow road marking',
+  'right and u-turn arrow road marking',
+  'u-turn arrow road marking',
+  'traffic light',
+]
 
-const MAX_IMAGES = 5 // matches the model step's "Max Concurrent Requests" setting
+const MAX_IMAGES = 20 // matches the model step's "Max Concurrent Requests" setting
 
 
 
@@ -79,6 +93,7 @@ app.post('/api/detect-chevrons', async (req, res) => {
     }
 
     const result = await rfResponse.json()
+    console.log(JSON.stringify(result.outputs?.[0], null, 2).slice(0, 3000))
 
     // Sanity check: warn loudly if the output count doesn't match what we sent,
     // since that would mean frames get matched to the wrong detections.

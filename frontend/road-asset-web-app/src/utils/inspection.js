@@ -5,16 +5,45 @@
 // Settings
 // ===========================================================================
 export const MAX_FRAMES = 300 // safety cap so the browser tab doesn't run out of memory
-export const API_BASE = 'http://192.168.0.31:3001' // or 'http://localhost:3001'
+export const API_BASE = 'http://192.168.0.43:3001' // or 'http://localhost:3001'
 export const BATCH_ENDPOINT = `${API_BASE}/api/detect-chevrons`
-export const BATCH_SIZE = 5 // must match MAX_IMAGES on the server / the model's Max Concurrent Requests
+export const BATCH_SIZE = 20 // must match MAX_IMAGES on the server / the model's Max Concurrent Requests
 
-export const CLASS_OPTIONS = ['chevron sign', 'traffic light']
+//export const CLASS_OPTIONS = ['chevron sign', 'traffic light']
 
+// const CLASS_STYLES = {
+//   'chevron sign': { border: 'border-orange-400', bg: 'bg-orange-400/15', tag: 'bg-orange-400' },
+//   'traffic light': { border: 'border-cyan-400', bg: 'bg-cyan-400/15', tag: 'bg-cyan-400' },
+// }
+
+// Must match DETECT_CLASSES in server.js exactly
+export const CLASS_OPTIONS = [
+  'traffic sign',
+  'left turn arrow road marking',
+  'right turn arrow road marking',
+  'straight arrow road marking',
+  'left and straight arrow road marking',
+  'right and straight arrow road marking',
+  'left and u-turn arrow road marking',
+  'right and u-turn arrow road marking',
+  'u-turn arrow road marking',
+  'traffic light',
+]
+
+// Full class names are written out so Tailwind can find them
 const CLASS_STYLES = {
-  'chevron sign': { border: 'border-orange-400', bg: 'bg-orange-400/15', tag: 'bg-orange-400' },
+  'traffic sign': { border: 'border-orange-400', bg: 'bg-orange-400/15', tag: 'bg-orange-400' },
   'traffic light': { border: 'border-cyan-400', bg: 'bg-cyan-400/15', tag: 'bg-cyan-400' },
+  'left turn arrow road marking': { border: 'border-blue-400', bg: 'bg-blue-400/15', tag: 'bg-blue-400' },
+  'right turn arrow road marking': { border: 'border-violet-400', bg: 'bg-violet-400/15', tag: 'bg-violet-400' },
+  'straight arrow road marking': { border: 'border-green-400', bg: 'bg-green-400/15', tag: 'bg-green-400' },
+  'left and straight arrow road marking': { border: 'border-lime-400', bg: 'bg-lime-400/15', tag: 'bg-lime-400' },
+  'right and straight arrow road marking': { border: 'border-teal-400', bg: 'bg-teal-400/15', tag: 'bg-teal-400' },
+  'left and u-turn arrow road marking': { border: 'border-pink-400', bg: 'bg-pink-400/15', tag: 'bg-pink-400' },
+  'right and u-turn arrow road marking': { border: 'border-rose-400', bg: 'bg-rose-400/15', tag: 'bg-rose-400' },
+  'u-turn arrow road marking': { border: 'border-yellow-400', bg: 'bg-yellow-400/15', tag: 'bg-yellow-400' },
 }
+
 const DEFAULT_STYLE = { border: 'border-fuchsia-400', bg: 'bg-fuchsia-400/15', tag: 'bg-fuchsia-400' }
 export const styleFor = (label) => CLASS_STYLES[label] || DEFAULT_STYLE
 

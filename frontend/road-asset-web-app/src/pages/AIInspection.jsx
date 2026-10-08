@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import FrameViewer from '../components/FrameViewer'
 import { processVideo } from '../utils/inspection'
 import { fetchVideos } from '../utils/trips'
@@ -35,6 +35,7 @@ const AIInspection = () => {
   const [videos, setVideos] = useState([]) // history: every saved video
   const [videosStatus, setVideosStatus] = useState('loading') // loading | done | error
   const [selectedId, setSelectedId] = useState(null) // the video currently loaded
+  const [runWhenReady, setRunWhenReady] = useState(false) // a row's "Run inspection" was clicked
   const [imageCount, setImageCount] = useState(null) // set when the frames come from picked images
   const [imageProgress, setImageProgress] = useState(null) // { done, total } while images are read
   const [uploading, setUploading] = useState(false)
@@ -69,21 +70,52 @@ const AIInspection = () => {
     loadVideos()
   }, [loadVideos])
 
+  // Refresh the counts in the list shortly after saving finishes
+  const refreshTimer = useRef(null)
+  useEffect(() => {
+    if (saveStatus !== 'saved') return
+    clearTimeout(refreshTimer.current)
+    refreshTimer.current = setTimeout(loadVideos, 500)
+  }, [saveStatus, loadVideos])
+
+  // A row's "Run inspection" was clicked: wait until that video's frames are loaded, then run
+  useEffect(() => {
+    if (!runWhenReady || framesStatus !== 'done' || frames.length === 0) return
+    setRunWhenReady(false)
+    inspectAll()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [runWhenReady, framesStatus, frames.length])
+
   // Load a video from the history. Clearing the frames in the same update avoids showing the old ones.
-  const selectVideo = (id) => {
+  // run: true = start detection once its frames are loaded (the viewer stays closed)
+  const selectVideo = (id, { run = false } = {}) => {
     setError('')
     setNotice('')
+    setRunWhenReady(run)
     if (id !== selectedId) {
       setFrames([])
       setImageCount(null)
       setSelectedId(id)
     }
-    setViewerOpen(true) // the viewer appears as soon as the frames have loaded
+    if (!run) setViewerOpen(true) // the viewer appears as soon as the frames have loaded
+  }
+
+  const runForVideo = (video) => {
+    if (
+      video.inspected_count > 0 &&
+      !window.confirm(
+        'This video already has inspection results. Running again replaces the detections on frames you have not edited by hand. Continue?'
+      )
+    ) {
+      return
+    }
+    selectVideo(video.id, { run: true })
   }
 
   const uploadVideo = async (file) => {
     setUploading(true)
     setViewerOpen(false)
+    setRunWhenReady(false)
     try {
       const { videoId, duplicate } = await processVideo(file)
       await loadVideos()
@@ -105,6 +137,7 @@ const AIInspection = () => {
   // Images are only kept in memory: they aren't part of a saved video
   const loadImages = async (files) => {
     setSelectedId(null)
+    setRunWhenReady(false)
     setFrames([])
     setViewerOpen(false)
     setImageCount(files.length)
@@ -158,7 +191,8 @@ const AIInspection = () => {
     }
   }
 
-  const busy = uploading || imageProgress !== null || framesStatus === 'loading' || detecting || inspectingIndex !== null
+  const busy =
+    uploading || imageProgress !== null || framesStatus === 'loading' || detecting || inspectingIndex !== null
   const hasFrames = frames.length > 0
   const reviewedFrames = frames.filter((f) => f.detected || f.edited)
   const totalObjects = reviewedFrames.reduce((n, f) => n + f.boxes.length, 0)
@@ -178,7 +212,7 @@ const AIInspection = () => {
       <h1 className="text-2xl font-semibold text-slate-900">AI inspection</h1>
       <p className="mt-1 text-slate-600">
         Upload a dashcam video or images, review the frames, run detection and correct the results. Every
-        uploaded video is kept in the history below.
+        uploaded video is kept in the history below, each with its own inspection button.
       </p>
 
       <div className="mt-6 flex flex-wrap items-end gap-4 rounded-lg border border-slate-200 bg-white p-4">
@@ -194,14 +228,6 @@ const AIInspection = () => {
           />
           <span className="text-xs text-slate-400">A video, or one or more images</span>
         </label>
-
-        <button
-          onClick={inspectAll}
-          disabled={!hasFrames || busy}
-          className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {detecting ? 'Detecting…' : reviewedFrames.length > 0 ? 'Run inspection again' : 'Run inspection'}
-        </button>
       </div>
 
       {uploading && (
@@ -220,7 +246,7 @@ const AIInspection = () => {
           <p className="mt-1 text-sm text-slate-600">
             {imageProgress
               ? `Loading image ${bar.done} of ${bar.total}`
-              : `Detecting in frame ${bar.done} of ${bar.total}`}
+              : `Detecting in ${currentName}: frame ${bar.done} of ${bar.total}`}
           </p>
         </div>
       )}
@@ -243,12 +269,24 @@ const AIInspection = () => {
                 ` · ${totalObjects} object${totalObjects !== 1 ? 's' : ''} in ${reviewedFrames.length} reviewed frame${reviewedFrames.length !== 1 ? 's' : ''}`}
             </p>
           </div>
-          <button
-            onClick={() => setViewerOpen(true)}
-            className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
-          >
-            View frames
-          </button>
+          <div className="flex items-center gap-2">
+            {/* Picked images have no row in the history, so their button lives here */}
+            {selectedId === null && (
+              <button
+                onClick={inspectAll}
+                disabled={busy}
+                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {detecting ? 'Detecting…' : 'Run inspection'}
+              </button>
+            )}
+            <button
+              onClick={() => setViewerOpen(true)}
+              className="rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700"
+            >
+              View frames
+            </button>
+          </div>
         </div>
       )}
 
@@ -266,30 +304,42 @@ const AIInspection = () => {
       {videos.length > 0 && (
         <ul className="mt-3 divide-y divide-slate-200 overflow-hidden rounded-lg border border-slate-200 bg-white">
           {videos.map((v) => {
-            const s = v.id === selectedId && liveStats ? { ...v, ...liveStats } : v
+            const isSelected = v.id === selectedId
+            const s = isSelected && liveStats ? { ...v, ...liveStats } : v
+            const running = isSelected && detecting
+
             return (
-              <li key={v.id}>
+              <li
+                key={v.id}
+                className={`flex flex-wrap items-center justify-between gap-3 px-4 py-3 ${isSelected ? 'bg-blue-50' : ''}`}
+              >
+                {/* Click the name to open the frames */}
                 <button
                   onClick={() => selectVideo(v.id)}
                   disabled={busy}
-                  className={`flex w-full flex-wrap items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 ${
-                    v.id === selectedId ? 'bg-blue-50' : ''
-                  }`}
+                  className="min-w-0 flex-1 text-left disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <div>
-                    <p className="font-medium text-slate-900">{v.name}</p>
-                    <p className="text-xs text-slate-500">
-                      Uploaded {formatDate(v.created_at)} ·{' '}
-                      {v.gps_count > 0 ? `${v.gps_count} GPS points` : 'no GPS'}
-                    </p>
-                  </div>
+                  <p className="truncate font-medium text-slate-900">{v.name}</p>
+                  <p className="text-xs text-slate-500">
+                    Uploaded {formatDate(v.created_at)} · {v.gps_count > 0 ? `${v.gps_count} GPS points` : 'no GPS'}
+                  </p>
+                </button>
+
+                <div className="flex items-center gap-4">
                   <div className="text-right text-sm text-slate-600">
                     <p>{s.frame_count} frames</p>
                     <p>
                       {s.inspected_count} inspected · {s.object_count} object{s.object_count !== 1 ? 's' : ''}
                     </p>
                   </div>
-                </button>
+                  <button
+                    onClick={() => runForVideo(s)}
+                    disabled={busy}
+                    className="w-32 rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {running ? 'Detecting…' : s.inspected_count > 0 ? 'Run again' : 'Run inspection'}
+                  </button>
+                </div>
               </li>
             )
           })}
