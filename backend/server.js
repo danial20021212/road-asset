@@ -10,6 +10,9 @@ import { initDb } from './db/pool.js'
 import { FRAMES_DIR } from './services/frames.service.js'
 
 import framesRoutes from './routes/frames.routes.js'
+import signsRoutes from './routes/signs.routes.js'
+
+
 
 
 const app = express()
@@ -25,6 +28,8 @@ app.use('/api/trips', tripsRoutes)
 
 app.use('/frames', express.static(FRAMES_DIR))
 app.use('/api/frames', framesRoutes)
+
+app.use('/api/detect-signs', signsRoutes)
 
 initDb().catch((err) => console.error('Database not ready:', err.message)) // before app.listen
 

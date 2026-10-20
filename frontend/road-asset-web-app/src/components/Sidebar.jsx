@@ -10,6 +10,8 @@ const Sidebar = () => {
       <NavLink to="/" end className={linkClass}>Home</NavLink>
       <NavLink to="/inspection" className={linkClass}>AI Inspection</NavLink>
       <NavLink to="/map" className={linkClass}>Map</NavLink>
+      <NavLink to="/detections" className={linkClass}>Detections</NavLink>
+      <NavLink to="/sign-test" className={linkClass}>Sign Test</NavLink>
     </aside>
   )
 }

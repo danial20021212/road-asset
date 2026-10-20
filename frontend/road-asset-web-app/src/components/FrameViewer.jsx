@@ -13,12 +13,13 @@ const BoxToolbar = ({
   selectedBox,
   onChangeSelectedLabel,
   onDeleteSelected,
+  classOptions
 }) => {
   // If a box has a class that isn't in CLASS_OPTIONS, keep it selectable so the dropdown isn't blank
   const selectedLabelOptions =
-    selectedBox && !CLASS_OPTIONS.includes(selectedBox.label)
-      ? [...CLASS_OPTIONS, selectedBox.label]
-      : CLASS_OPTIONS
+    selectedBox && !classOptions.includes(selectedBox.label)
+      ? [...classOptions, selectedBox.label]
+      : classOptions
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg bg-slate-50 px-3 py-2">
@@ -40,7 +41,7 @@ const BoxToolbar = ({
           className={selectCls}
           aria-label="Class for new boxes"
         >
-          {CLASS_OPTIONS.map((c) => (
+          {classOptions.map((c) => (
             <option key={c} value={c}>
               {c}
             </option>
@@ -93,11 +94,13 @@ const FrameViewer = ({
   onBoxesChange,
   inspectingIndex,
   inspectDisabled,
+  saveStatus,
+  classOptions = CLASS_OPTIONS,
 }) => {
   const [index, setIndex] = useState(startIndex)
   const [selectedId, setSelectedId] = useState(null)
   const [drawMode, setDrawMode] = useState(false)
-  const [newLabel, setNewLabel] = useState(CLASS_OPTIONS[0])
+  const [newLabel, setNewLabel] = useState(classOptions[0])
 
   const total = frames.length
   const frame = frames[index]
@@ -212,7 +215,13 @@ const FrameViewer = ({
           </div>
           <div className="flex items-center gap-3">
             <span className="text-sm text-slate-500">
-              {statusText} · {frame.label}
+              <span className="text-sm text-slate-500">
+                {statusText} · {frame.label}
+                {frame.roadName && ` · ${frame.roadName}`}
+                {saveStatus === 'saving' && ' · saving…'}
+                {saveStatus === 'saved' && ' · saved'}
+                {saveStatus === 'error' && <span className="text-red-600"> · could not save</span>}
+              </span>
             </span>
             <button
               onClick={() => onInspect(index)}
@@ -233,6 +242,7 @@ const FrameViewer = ({
           selectedBox={selectedBox}
           onChangeSelectedLabel={changeSelectedLabel}
           onDeleteSelected={deleteSelected}
+          classOptions={classOptions}
         />
 
         {/* Image + editable boxes */}

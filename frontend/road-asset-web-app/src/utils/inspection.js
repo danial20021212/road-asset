@@ -5,7 +5,7 @@
 // Settings
 // ===========================================================================
 export const MAX_FRAMES = 300 // safety cap so the browser tab doesn't run out of memory
-export const API_BASE = 'http://192.168.0.43:3001' // or 'http://localhost:3001'
+export const API_BASE = 'http://192.168.0.23:3001' // or 'http://localhost:3001'
 export const BATCH_ENDPOINT = `${API_BASE}/api/detect-chevrons`
 export const BATCH_SIZE = 20 // must match MAX_IMAGES on the server / the model's Max Concurrent Requests
 
@@ -30,6 +30,15 @@ export const CLASS_OPTIONS = [
   'traffic light',
 ]
 
+export const SIGN_CATEGORIES = [
+  'regulatory_prohibitive',
+  'regulatory_mandatory',
+  'warning',
+  'informative',
+  'construction_temporary',
+  'unknown',
+]
+
 // Full class names are written out so Tailwind can find them
 const CLASS_STYLES = {
   'traffic sign': { border: 'border-orange-400', bg: 'bg-orange-400/15', tag: 'bg-orange-400' },
@@ -42,6 +51,14 @@ const CLASS_STYLES = {
   'left and u-turn arrow road marking': { border: 'border-pink-400', bg: 'bg-pink-400/15', tag: 'bg-pink-400' },
   'right and u-turn arrow road marking': { border: 'border-rose-400', bg: 'bg-rose-400/15', tag: 'bg-rose-400' },
   'u-turn arrow road marking': { border: 'border-yellow-400', bg: 'bg-yellow-400/15', tag: 'bg-yellow-400' },
+
+    // Sign Test tab (categories from the open-prompt workflow)
+  'regulatory_prohibitive': { border: 'border-red-500', bg: 'bg-red-500/15', tag: 'bg-red-500' },
+  'regulatory_mandatory': { border: 'border-blue-500', bg: 'bg-blue-500/15', tag: 'bg-blue-500' },
+  'warning': { border: 'border-yellow-400', bg: 'bg-yellow-400/15', tag: 'bg-yellow-400' },
+  'informative': { border: 'border-sky-400', bg: 'bg-sky-400/15', tag: 'bg-sky-400' },
+  'construction_temporary': { border: 'border-orange-500', bg: 'bg-orange-500/15', tag: 'bg-orange-500' },
+  'unknown': { border: 'border-slate-400', bg: 'bg-slate-400/15', tag: 'bg-slate-400' },
 }
 
 const DEFAULT_STYLE = { border: 'border-fuchsia-400', bg: 'bg-fuchsia-400/15', tag: 'bg-fuchsia-400' }
@@ -110,7 +127,7 @@ const parseMaybeJson = (v) => {
 
 // Walk the workflow output looking for an array of { box_2d, label } objects.
 // The array may be nested anywhere, or be a JSON string (optionally in a ```json fence).
-const findBoxArray = (node, depth = 0) => {
+export const findBoxArray = (node, depth = 0) => {
   if (depth > 8) return null
   node = parseMaybeJson(node)
   if (Array.isArray(node)) {
@@ -195,7 +212,7 @@ export const processVideo = async (file, signal) => {
 
 
 // Frames from the server are plain URLs; the detector needs base64
-const toDataUrl = async (src) => {
+export const toDataUrl = async (src) => {
   if (src.startsWith('data:')) return src
 
   const res = await fetch(src)
