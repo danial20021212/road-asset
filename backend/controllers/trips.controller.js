@@ -39,11 +39,19 @@ export async function listFrames(req, res) {
   }
 }
 
+const optText = (v) => v === undefined || v === null || typeof v === 'string'
+const optNum = (v) => v === undefined || v === null || Number.isFinite(v)
+
 const isValidBox = (b) =>
   typeof b?.label === 'string' &&
+  b.label.length > 0 &&
   Array.isArray(b.box_2d) &&
   b.box_2d.length === 4 &&
-  b.box_2d.every(Number.isFinite)
+  b.box_2d.every(Number.isFinite) &&
+  optText(b.category) &&
+  optText(b.shape) &&
+  optText(b.main_color) &&
+  optNum(b.confidence)
 
 // PUT /api/frames/:id/detections   body: { boxes: [{ label, box_2d }], edited: boolean }
 export async function putDetections(req, res) {

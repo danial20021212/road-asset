@@ -102,7 +102,14 @@ export async function getFrames(videoId) {
     `SELECT f.id, f.seq, f.image_path, f.lat, f.lng, f.inspected_at, f.edited,
             COALESCE(
               (SELECT json_agg(
-                        json_build_object('label', d.label, 'box_2d', json_build_array(d.box_ymin, d.box_xmin, d.box_ymax, d.box_xmax))
+                        json_build_object(
+                          'label', d.label,
+                          'category', d.category,
+                          'shape', d.shape,
+                          'main_color', d.main_color,
+                          'confidence', d.confidence,
+                          'box_2d', json_build_array(d.box_ymin, d.box_xmin, d.box_ymax, d.box_xmax)
+                        )
                         ORDER BY d.id)
                FROM detections d WHERE d.frame_id = f.id),
               '[]'::json
@@ -121,7 +128,8 @@ export async function getFrames(videoId) {
     lng: r.lng,
     inspected: r.inspected_at !== null,
     edited: r.edited,
-    boxes: r.boxes, // [{ label, box_2d: [ymin, xmin, ymax, xmax] }]
+    // [{ label, category, shape, main_color, confidence, box_2d: [ymin, xmin, ymax, xmax] }]
+    boxes: r.boxes,
   }))
 }
 
@@ -144,11 +152,19 @@ export async function saveDetections(frameId, boxes, edited) {
 
     if (boxes.length > 0) {
       await client.query(
-        `INSERT INTO detections (frame_id, label, box_ymin, box_xmin, box_ymax, box_xmax)
-         SELECT $1::bigint, * FROM unnest($2::text[], $3::real[], $4::real[], $5::real[], $6::real[])`,
+        `INSERT INTO detections
+           (frame_id, label, category, shape, main_color, confidence, box_ymin, box_xmin, box_ymax, box_xmax)
+         SELECT $1::bigint, * FROM unnest(
+           $2::text[], $3::text[], $4::text[], $5::text[], $6::real[],
+           $7::real[], $8::real[], $9::real[], $10::real[]
+         )`,
         [
           frameId,
           boxes.map((b) => b.label),
+          boxes.map((b) => b.category ?? null),
+          boxes.map((b) => b.shape ?? null),
+          boxes.map((b) => b.main_color ?? null),
+          boxes.map((b) => b.confidence ?? null),
           boxes.map((b) => b.box_2d[0]), // box_ymin
           boxes.map((b) => b.box_2d[1]), // box_xmin
           boxes.map((b) => b.box_2d[2]), // box_ymax

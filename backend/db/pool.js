@@ -37,12 +37,17 @@ export async function initDb() {
     CREATE TABLE IF NOT EXISTS detections (
       id BIGSERIAL PRIMARY KEY,
       frame_id BIGINT NOT NULL REFERENCES frames(id) ON DELETE CASCADE,
-      label TEXT NOT NULL,
+      label TEXT NOT NULL, -- what the object is: 'traffic sign', 'expressway sign', 'traffic light', ...
       box_ymin REAL NOT NULL, -- box coordinates on the 0-1000 scale the viewer uses
       box_xmin REAL NOT NULL,
       box_ymax REAL NOT NULL,
       box_xmax REAL NOT NULL
     );
+    ALTER TABLE detections ADD COLUMN IF NOT EXISTS category TEXT;   -- only for traffic signs
+    ALTER TABLE detections ADD COLUMN IF NOT EXISTS shape TEXT;
+    ALTER TABLE detections ADD COLUMN IF NOT EXISTS main_color TEXT;
+    ALTER TABLE detections ADD COLUMN IF NOT EXISTS confidence REAL; -- null for hand-drawn boxes
     CREATE INDEX IF NOT EXISTS detections_frame_idx ON detections (frame_id);
+    CREATE INDEX IF NOT EXISTS detections_label_idx ON detections (label, category);
   `)
 }
