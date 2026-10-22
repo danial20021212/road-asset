@@ -28,10 +28,7 @@ export const saveFrameBoxes = async (frameId, boxes, edited) => {
   const res = await fetch(`${API_BASE}/api/frames/${frameId}/detections`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      boxes: boxes.map(({ label, box_2d }) => ({ label, box_2d })),
-      edited,
-    }),
+    body: JSON.stringify({ boxes, edited }),
   })
   if (!res.ok) throw new Error(`Could not save boxes (status ${res.status})`)
 }

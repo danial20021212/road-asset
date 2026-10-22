@@ -1,10 +1,9 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Sidebar from './components/Sidebar'
-import Home from './pages/Home'
-import AIInspection from './pages/AIInspection'
-import Map from './pages/Map'
-import Detections from './pages/Detections'
-import SignTest from './pages/SignTest'
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import Sidebar from "./components/Sidebar";
+import Home from "./pages/Home";
+import AIInspection from "./pages/AIInspection";
+import Map from "./pages/Map";
+import Detections from "./pages/Detections";
 
 const App = () => {
   return (
@@ -15,14 +14,13 @@ const App = () => {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/inspection" element={<AIInspection />} />
-            <Route path="/map" element={<Map/>} />
-            <Route path='/detections' element={<Detections/>}></Route>
-            <Route path="/sign-test" element={<SignTest />} />
+            <Route path="/map" element={<Map />} />
+            <Route path="/detections" element={<Detections />}></Route>
           </Routes>
         </main>
       </div>
     </BrowserRouter>
-  )
-}
+  );
+};
 
-export default App
+export default App;

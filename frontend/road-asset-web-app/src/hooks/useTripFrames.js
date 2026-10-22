@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { API_BASE, BATCH_SIZE, detectFrames, formatTime, newId } from '../utils/inspection'
+import { API_BASE, BATCH_SIZE, detectFrames, formatTime, toApiBox, toViewerBox } from '../utils/inspection'
 import { fetchFrames, saveFrameBoxes } from '../utils/trips'
 
 // Turns a saved frame (with its saved boxes) into the shape FrameViewer uses
@@ -9,7 +9,7 @@ const toViewerFrame = (f) => ({
   label: formatTime(f.seq),
   width: 1280, // saved frames are 1280 px wide (16:9)
   height: 720,
-  boxes: f.boxes.map((b) => ({ id: newId(), box_2d: b.box_2d, label: b.label })),
+  boxes: f.boxes.map((b) => toViewerBox(b)),
   detected: f.inspected,
   edited: f.edited,
   lat: f.lat,
@@ -58,7 +58,7 @@ export function useTripFrames(videoId) {
     setSaveStatus('saving')
     saveTimers.current[frame.id] = setTimeout(async () => {
       try {
-        await saveFrameBoxes(frame.id, boxes, edited)
+        await saveFrameBoxes(frame.id, boxes.map(toApiBox), edited)
         setSaveStatus('saved')
       } catch (err) {
         console.error(err)
@@ -81,12 +81,12 @@ export function useTripFrames(videoId) {
     setInspectingIndex(i)
     const [updated] = await detectFrames([frame])
     setFrames((prev) => prev.map((f, k) => (k === i ? updated : f)))
-    // don't save a failed run, it would wipe the boxes already saved
+    // a failed run keeps the old boxes and isn't saved
     if (!updated.detectError) scheduleSave(updated, updated.boxes, false)
     setInspectingIndex(null)
   }
 
-  // Inspect ALL frames (frames with manual edits are kept as-is)
+  // Inspect ALL frames (frames with manual edits are kept as they are)
   const inspectAll = async () => {
     const current = framesRef.current
     const targets = current.map((_, i) => i).filter((i) => !current[i].edited && current[i].dataUrl)

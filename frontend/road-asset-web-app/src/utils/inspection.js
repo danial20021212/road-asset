@@ -1,35 +1,17 @@
-// Everything the AI inspection page needs that isn't a React component:
-// settings, small helpers, and turning model output into boxes.
+// Everything the inspection pages need that isn't a React component:
+// settings, class lists and colors, small helpers, and talking to the detection endpoint.
 
 // ===========================================================================
 // Settings
 // ===========================================================================
-export const MAX_FRAMES = 300 // safety cap so the browser tab doesn't run out of memory
-export const API_BASE = 'http://192.168.0.23:3001' // or 'http://localhost:3001'
-export const BATCH_ENDPOINT = `${API_BASE}/api/detect-chevrons`
-export const BATCH_SIZE = 20 // must match MAX_IMAGES on the server / the model's Max Concurrent Requests
+export const API_BASE = 'http://localhost:3001' // or 'http://localhost:3001'
+export const DETECT_ENDPOINT = `${API_BASE}/api/detect`
+export const BATCH_SIZE = 5 // frames per detection request; must not exceed MAX_IMAGES in detect.controller.js
 
-//export const CLASS_OPTIONS = ['chevron sign', 'traffic light']
-
-// const CLASS_STYLES = {
-//   'chevron sign': { border: 'border-orange-400', bg: 'bg-orange-400/15', tag: 'bg-orange-400' },
-//   'traffic light': { border: 'border-cyan-400', bg: 'bg-cyan-400/15', tag: 'bg-cyan-400' },
-// }
-
-// Must match DETECT_CLASSES in server.js exactly
-export const CLASS_OPTIONS = [
-  'traffic sign',
-  'left turn arrow road marking',
-  'right turn arrow road marking',
-  'straight arrow road marking',
-  'left and straight arrow road marking',
-  'right and straight arrow road marking',
-  'left and u-turn arrow road marking',
-  'right and u-turn arrow road marking',
-  'u-turn arrow road marking',
-  'traffic light',
-]
-
+// ===========================================================================
+// Classes
+// ===========================================================================
+// The model gives every traffic sign one of these categories
 export const SIGN_CATEGORIES = [
   'regulatory_prohibitive',
   'regulatory_mandatory',
@@ -39,9 +21,39 @@ export const SIGN_CATEGORIES = [
   'unknown',
 ]
 
+// Everything else the model can label (anything that is not a traffic sign)
+export const OBJECT_CLASSES = [
+  'expressway sign',
+  'traffic light',
+  'left turn arrow road marking',
+  'right turn arrow road marking',
+  'straight arrow road marking',
+  'left and straight arrow road marking',
+  'right and straight arrow road marking',
+  'left and u-turn arrow road marking',
+  'right and u-turn arrow road marking',
+  'u-turn arrow road marking',
+  'yellow box junction',
+  'feeder pillar',
+  'bus stop',
+  'traffic island',
+]
+
+// What the viewer shows and its dropdowns offer. A traffic sign appears as its category.
+export const CLASS_OPTIONS = [...SIGN_CATEGORIES, ...OBJECT_CLASSES]
+
 // Full class names are written out so Tailwind can find them
 const CLASS_STYLES = {
-  'traffic sign': { border: 'border-orange-400', bg: 'bg-orange-400/15', tag: 'bg-orange-400' },
+  // traffic sign categories
+  regulatory_prohibitive: { border: 'border-red-500', bg: 'bg-red-500/15', tag: 'bg-red-500' },
+  regulatory_mandatory: { border: 'border-blue-600', bg: 'bg-blue-600/15', tag: 'bg-blue-600' },
+  warning: { border: 'border-yellow-400', bg: 'bg-yellow-400/15', tag: 'bg-yellow-400' },
+  informative: { border: 'border-sky-400', bg: 'bg-sky-400/15', tag: 'bg-sky-400' },
+  construction_temporary: { border: 'border-orange-500', bg: 'bg-orange-500/15', tag: 'bg-orange-500' },
+  unknown: { border: 'border-slate-400', bg: 'bg-slate-400/15', tag: 'bg-slate-400' },
+
+  // other objects
+  'expressway sign': { border: 'border-emerald-600', bg: 'bg-emerald-600/15', tag: 'bg-emerald-600' },
   'traffic light': { border: 'border-cyan-400', bg: 'bg-cyan-400/15', tag: 'bg-cyan-400' },
   'left turn arrow road marking': { border: 'border-blue-400', bg: 'bg-blue-400/15', tag: 'bg-blue-400' },
   'right turn arrow road marking': { border: 'border-violet-400', bg: 'bg-violet-400/15', tag: 'bg-violet-400' },
@@ -50,17 +62,14 @@ const CLASS_STYLES = {
   'right and straight arrow road marking': { border: 'border-teal-400', bg: 'bg-teal-400/15', tag: 'bg-teal-400' },
   'left and u-turn arrow road marking': { border: 'border-pink-400', bg: 'bg-pink-400/15', tag: 'bg-pink-400' },
   'right and u-turn arrow road marking': { border: 'border-rose-400', bg: 'bg-rose-400/15', tag: 'bg-rose-400' },
-  'u-turn arrow road marking': { border: 'border-yellow-400', bg: 'bg-yellow-400/15', tag: 'bg-yellow-400' },
-
-    // Sign Test tab (categories from the open-prompt workflow)
-  'regulatory_prohibitive': { border: 'border-red-500', bg: 'bg-red-500/15', tag: 'bg-red-500' },
-  'regulatory_mandatory': { border: 'border-blue-500', bg: 'bg-blue-500/15', tag: 'bg-blue-500' },
-  'warning': { border: 'border-yellow-400', bg: 'bg-yellow-400/15', tag: 'bg-yellow-400' },
-  'informative': { border: 'border-sky-400', bg: 'bg-sky-400/15', tag: 'bg-sky-400' },
-  'construction_temporary': { border: 'border-orange-500', bg: 'bg-orange-500/15', tag: 'bg-orange-500' },
-  'unknown': { border: 'border-slate-400', bg: 'bg-slate-400/15', tag: 'bg-slate-400' },
+  'u-turn arrow road marking': { border: 'border-purple-400', bg: 'bg-purple-400/15', tag: 'bg-purple-400' },
+  'yellow box junction': { border: 'border-amber-500', bg: 'bg-amber-500/15', tag: 'bg-amber-500' },
+  'feeder pillar': { border: 'border-indigo-400', bg: 'bg-indigo-400/15', tag: 'bg-indigo-400' },
+  'bus stop': { border: 'border-stone-400', bg: 'bg-stone-400/15', tag: 'bg-stone-400' },
+  'traffic island': { border: 'border-purple-600', bg: 'bg-purple-600/15', tag: 'bg-purple-600' },
 }
 
+// A label that isn't in the table (for example one the model invented) gets this color
 const DEFAULT_STYLE = { border: 'border-fuchsia-400', bg: 'bg-fuchsia-400/15', tag: 'bg-fuchsia-400' }
 export const styleFor = (label) => CLASS_STYLES[label] || DEFAULT_STYLE
 
@@ -70,121 +79,48 @@ export const MIN_DRAW = 5 // drawn boxes smaller than this in either direction a
 // Boxes are stored on a 0-1000 scale, so every coordinate is clamped to that range
 export const clamp = (v) => Math.max(0, Math.min(1000, v))
 
-
 // ===========================================================================
 // Small helpers
 // ===========================================================================
-// Seek a video to a time and wait until that frame is ready to draw
-export const seekTo = (video, time) =>
-  new Promise((resolve, reject) => {
-    const cleanup = () => {
-      video.removeEventListener('seeked', onSeeked)
-      video.removeEventListener('error', onError)
-    }
-    const onSeeked = () => {
-      cleanup()
-      resolve()
-    }
-    const onError = () => {
-      cleanup()
-      reject(new Error('Could not read a frame from this video.'))
-    }
-    video.addEventListener('seeked', onSeeked)
-    video.addEventListener('error', onError)
-    video.currentTime = Math.max(time, 0.001)
-  })
-
 export const formatTime = (s) => {
   const m = Math.floor(s / 60)
   const sec = (s % 60).toFixed(1).padStart(4, '0')
   return `${m}:${sec}`
 }
 
-
-// ===========================================================================
-// Model output -> boxes
-// ===========================================================================
-// ---------------------------------------------------------------------------
-// Turning the model output into editable boxes.
-// Every box is stored as { id, box_2d: [ymin, xmin, ymax, xmax], label }
-// with coordinates normalised to 0-1000 (so they scale with any image size).
-// ---------------------------------------------------------------------------
-
 let boxCounter = 0
 export const newId = () => `box-${++boxCounter}`
 
-const parseMaybeJson = (v) => {
-  if (typeof v !== 'string') return v
-  const t = v.trim()
-  if (!(t.startsWith('[') || t.startsWith('{') || t.startsWith('```'))) return v
-  const stripped = t.replace(/^```(?:json)?/i, '').replace(/```$/, '').trim()
-  try {
-    return JSON.parse(stripped)
-  } catch {
-    return v
+// ===========================================================================
+// Box conversion
+// A viewer box:  { id, box_2d: [ymin, xmin, ymax, xmax], label, shape?, main_color?, confidence? }
+//   where label is the category for a traffic sign, otherwise the object's own label.
+// An API box (what the server stores and returns): the same, but with label + category separate.
+// ===========================================================================
+export const toViewerBox = (b) => ({
+  id: newId(),
+  box_2d: b.box_2d,
+  label: b.label === 'traffic sign' ? b.category || 'unknown' : b.label,
+  shape: b.shape ?? null,
+  main_color: b.main_color ?? null,
+  confidence: b.confidence ?? null,
+})
+
+export const toApiBox = (b) => {
+  const isSignCategory = SIGN_CATEGORIES.includes(b.label)
+  return {
+    label: isSignCategory ? 'traffic sign' : b.label,
+    category: isSignCategory ? b.label : null,
+    shape: b.shape ?? null,
+    main_color: b.main_color ?? null,
+    confidence: b.confidence ?? null,
+    box_2d: b.box_2d,
   }
 }
 
-// Walk the workflow output looking for an array of { box_2d, label } objects.
-// The array may be nested anywhere, or be a JSON string (optionally in a ```json fence).
-export const findBoxArray = (node, depth = 0) => {
-  if (depth > 8) return null
-  node = parseMaybeJson(node)
-  if (Array.isArray(node)) {
-    if (node.length > 0 && node.every((it) => it && Array.isArray(it.box_2d) && it.box_2d.length === 4)) {
-      return node
-    }
-    for (const item of node) {
-      const found = findBoxArray(item, depth + 1)
-      if (found) return found
-    }
-    return null
-  }
-  if (node && typeof node === 'object') {
-    for (const value of Object.values(node)) {
-      const found = findBoxArray(value, depth + 1)
-      if (found) return found
-    }
-  }
-  return null
-}
-
-export const extractBoxes = (output, fallbackDims) => {
-  // 1) Preferred: Roboflow's parsed predictions (pixel x/y center + width/height).
-  const preds = output?.model?.predictions?.predictions
-  if (Array.isArray(preds)) {
-    const rawBoxes = findBoxArray(output)
-    if (preds.length === 0 && rawBoxes) {
-      console.warn('No parsed predictions but raw box_2d found — ignoring raw boxes', rawBoxes)
-    }
-    const dims = output?.model?.predictions?.image || fallbackDims
-    return preds.map((p) => ({
-      id: newId(),
-      box_2d: [
-        clamp(((p.y - p.height / 2) / dims.height) * 1000),
-        clamp(((p.x - p.width / 2) / dims.width) * 1000),
-        clamp(((p.y + p.height / 2) / dims.height) * 1000),
-        clamp(((p.x + p.width / 2) / dims.width) * 1000),
-      ],
-      label: p.class || CLASS_OPTIONS[0],
-    }))
-  }
-
-  // 2) Fallback only: raw [{ box_2d, label }] list (axis order can't be trusted)
-  const modelBoxes = findBoxArray(output)
-  if (modelBoxes) {
-    return modelBoxes.map((b) => ({
-      id: newId(),
-      box_2d: b.box_2d.map((n) => clamp(Number(n))),
-      label: b.label || b.class || CLASS_OPTIONS[0],
-    }))
-  }
-
-  console.warn('No boxes found in workflow output (unrecognised shape):', output)
-  return []
-}
-
-
+// ===========================================================================
+// Talking to the server
+// ===========================================================================
 // Uploads a video once. The server reads its GPS, cuts one frame per second and saves everything.
 export const processVideo = async (file, signal) => {
   const form = new FormData()
@@ -207,9 +143,7 @@ export const processVideo = async (file, signal) => {
     throw new Error('The video was processed but could not be saved. Check that the database is running.')
   }
   return { videoId, duplicate: !!duplicate }
-
 }
-
 
 // Frames from the server are plain URLs; the detector needs base64
 export const toDataUrl = async (src) => {
@@ -227,44 +161,31 @@ export const toDataUrl = async (src) => {
   })
 }
 
-// Sends 1..BATCH_SIZE frames to the backend in one request and returns the same
-// frames with fresh boxes. The server matches outputs[i] back to images[i].
+// Sends 1..BATCH_SIZE frames to /api/detect and returns the same frames with fresh boxes.
+// results[i] from the server belongs to chunk[i]. A frame that fails keeps its previous boxes.
 export const detectFrames = async (chunk) => {
-  const clean = chunk.map((f) => ({
-    ...f,
-    boxes: [],
-    detected: false,
-    edited: false,
-    detectError: undefined,
-  }))
   try {
-    const images = await Promise.all(clean.map((f) => toDataUrl(f.dataUrl)))
+    const images = await Promise.all(chunk.map((f) => toDataUrl(f.dataUrl)))
 
-    const res = await fetch(BATCH_ENDPOINT, {
+    const res = await fetch(DETECT_ENDPOINT, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ images }),
     })
-    if (!res.ok) throw new Error(`Batch request failed (status ${res.status})`)
-    const result = await res.json()
-    const outputs = Array.isArray(result.outputs) ? result.outputs : []
+    if (!res.ok) throw new Error(`Detection request failed (status ${res.status})`)
 
-    if (outputs.length !== clean.length) {
-      console.warn(
-        `Batch mismatch: sent ${clean.length} frames, got ${outputs.length} outputs. Marking this batch as failed.`
-      )
-      return clean.map((f) => ({
-        ...f,
-        detectError: `Batch returned ${outputs.length} results for ${clean.length} frames`,
-      }))
+    const { results } = await res.json()
+    if (!Array.isArray(results) || results.length !== chunk.length) {
+      throw new Error('The server returned the wrong number of results')
     }
 
-    return clean.map((f, j) => ({
-      ...f,
-      boxes: extractBoxes(outputs[j], { width: f.width, height: f.height }),
-      detected: true,
-    }))
+    return chunk.map((f, j) => {
+      const r = results[j]
+      if (r.error) return { ...f, detectError: r.error }
+      return { ...f, boxes: r.detections.map(toViewerBox), detected: true, edited: false, detectError: undefined }
+    })
   } catch (err) {
-    return clean.map((f) => ({ ...f, detectError: err.message }))
+    console.error(err)
+    return chunk.map((f) => ({ ...f, detectError: err.message }))
   }
 }
